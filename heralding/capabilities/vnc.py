@@ -25,6 +25,8 @@ RFB_VERSION = b'RFB 003.007\n'
 AUTH_METHODS = b'\x01\x02'
 VNC_AUTH = b'\x02'
 AUTH_FAILED = b'\x00\x00\x00\x01'
+# Random, but constant challenge, allows decryption of responses using e.g.: rainbow tables
+CONST_CHALLENGE = b'\xbd\x9f\xdd\xf7\x66\xf9\xe9\x11' 
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +55,10 @@ class Vnc(HandlerBase):
       session.end_session()
 
   async def do_vnc_authentication(self, reader, writer, session):
-    challenge = os.urandom(16)
+    if os.urandom(1) > b'\x80':
+      challenge = CONST_CHALLENGE + os.urandom(8)
+    else:
+      challenge = os.urandom(8) + CONST_CHALLENGE
     writer.write(challenge)
 
     client_response = await reader.read(1024)
